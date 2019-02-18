@@ -5,7 +5,7 @@
 module.exports = {
   // MongoDB connection options
   mongo: {
-    uri: 'mongodb://localhost/kiboengage-dev'
+    uri: 'mongodb://localhost/businessgateway-dev'
   },
   seedDB: false,
   domain: 'http://localhost:8000',
