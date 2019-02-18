@@ -1,5 +1,4 @@
 const config = require('./config/environment/index')
-const Raven = require('raven')
 const path = require('path')
 
 module.exports = function (app) {
@@ -46,8 +45,4 @@ module.exports = function (app) {
   }).post((req, res) => {
     res.redirect('/')
   })
-
-  if (env === 'production' || env === 'staging') {
-    app.use(Raven.errorHandler())
-  }
 }

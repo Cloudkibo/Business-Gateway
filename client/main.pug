@@ -7,24 +7,14 @@ html(lang="en")
     meta(charset="utf-8")
     title
       | KiboPush | Sign In
-
     meta(name="description" content="Latest updates and statistic charts")
     meta(http-equiv="X-UA-Compatible" content="IE=edge")
     meta(name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no")
     script(type='text/javascript').
-      window.__url_development = "http://localhost:3000";
-      window.__url_production = "https://app.kibopush.com";
-      window.__url_staging = "https://staging.kibopush.com";
+      window.__url_production = "https://kiboengage.cloudkibo.com";
+      window.__url_staging = "https://skiboengage.cloudkibo.com";
+      window.__url_development = "http://localhost:3021";
     script(src="https://cdn.cloudkibo.com/public/scripts/kiboAuth.js")
-    script.
-      const hostname =  window.location.hostname;
-      let title = '';
-      if(hostname.includes('kiboengage.cloudkibo.com')) {
-        title = 'KiboEngage';
-      } else if (hostname.includes('kibochat.cloudkibo.com')) {
-        title = 'KiboChat';
-      }
-      document.title = `${title} | Dashboard`;
     //- script(type='text/javascript').
     //-   window.__kibo_company_id = "5a71705eae76a333430b9f15";
     //-   document.addEventListener("DOMContentLoaded", function () {
@@ -174,7 +164,12 @@ html(lang="en")
             }
           }).install()
           }
-    script(src="js/bundle.js")
+    if environment === 'production'
+      script(src="https://cdn.cloudkibo.com/public/bundle.js")
+    if environment === 'staging'
+      script(src="https://cdn.cloudkibo.com/public/bundle_staging.js")
+    if environment === 'development'
+      script(src="http://localhost:3021/react-bundle")
     // Js effects for material design. + Tooltips
     // <script src="https://cdn.cloudkibo.com/public/js/material.min.js"></script>
     // Helper scripts (Tabs, Equal height, Scrollbar, etc)

@@ -5,12 +5,11 @@
 
 const config = require('../config/environment')
 const compose = require('composable-middleware')
-const apiCaller = require('../api/v1.1/utility')
+const apiCaller = require('../api/v1/utility')
 const needle = require('needle')
 const _ = require('lodash')
 const util = require('util')
 const logger = require('../components/logger')
-const requestPromise = require('request-promise')
 const TAG = 'auth/auth.service.js'
 
 /**
