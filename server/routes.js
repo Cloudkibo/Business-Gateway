@@ -16,6 +16,7 @@ module.exports = function (app) {
   app.use('/api/tags', require('./api/v1/tags'))
   app.use('/api/dashboard', require('./api/v1/dashboard'))
   app.use('/api/scripts', require('./api/scripts'))
+  app.use('/api/businessGateway', require('./api/v1/businessGateway'))
 
   // auth middleware go here if you authenticate on same server
 
