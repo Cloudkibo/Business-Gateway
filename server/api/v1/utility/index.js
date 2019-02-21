@@ -1,4 +1,5 @@
 const config = require('../../../config/environment/index')
+const requestPromise = require('request-promise')
 // const logger = require('../../../components/logger')
 // const TAG = 'api/v1/utility/index.js'
 // const util = require('util')
