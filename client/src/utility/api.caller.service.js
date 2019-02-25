@@ -1,37 +1,21 @@
-/**
- * Created by sojharo on 26/07/2017.
- */
-
 import fetch from 'isomorphic-fetch'
 import _ from 'lodash'
 import auth from './auth.service'
-import { browserHistory } from 'react-router'
 
 export const API_URL = '/api'
 
-export default function callApi (endpoint, method = 'get', body, type = 'kibopush') {
-  let headers = {
-    'content-type': 'application/json'
-  }
-
-  if (auth.loggedIn()) {
-    headers = _.merge(headers, {
-      Authorization: `Bearer ${auth.getToken()}`
-    })
-  }
-  let fetchUrl = ''
-  if (type === 'kibopush') {
-    fetchUrl = `${API_URL}/${endpoint}`
-  } else fetchUrl = endpoint
-  return fetch(fetchUrl, {
+export default function callApi (endpoint, method = 'get', body, headers = {'content-type': 'application/json'}) {
+  headers = _.merge(headers, {
+    Authorization: `Bearer ${auth.getToken()}`
+  })
+  return fetch(`${API_URL}/${endpoint}`, {
     headers,
     method,
     body: JSON.stringify(body)
   }).then(response => {
-    console.log('response', response)
     if (response.statusText === 'Unauthorized') {
-      auth.logout()
-      browserHistory.push('/')
+      // auth.logout()
+      // browserHistory.push('/')
       return Promise.reject(response.statusText)
     }
     return response

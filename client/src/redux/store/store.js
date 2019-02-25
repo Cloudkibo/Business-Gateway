@@ -1,5 +1,5 @@
 import { createStore, compose, applyMiddleware } from 'redux'
-import initialDataLoad from '../reducers/reducer'
+import initialDataLoad from '../reducers'
 import thunk from 'redux-thunk'
 
 export function configureStore (initialState = {}) {

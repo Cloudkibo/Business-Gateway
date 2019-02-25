@@ -5,7 +5,7 @@ module.exports = function (app) {
   // API middlewares go here
   const env = app.get('env')
 
-  app.use('/api/test', require('./api/v1/test'))
+  app.use('/api/v1/test', require('./api/v1/test'))
   app.use('/api/subscribers', require('./api/v1/subscribers'))
   app.use('/api/users', require('./api/v1/user'))
   app.use('/api/company', require('./api/v1/companyprofile'))

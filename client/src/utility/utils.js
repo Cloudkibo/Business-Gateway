@@ -20,22 +20,7 @@ export function isWebURL (value) {
   return regexp.test(value)
 }
 
-export function isWebViewUrl (value) {
-  let regexp = /^(http|https):///
-  return regexp.test(value)
-}
-
-export function doesPageHaveSubscribers (pages, pageId) {
-  console.log('doesPageHaveSubscribers pages', pages)
-  console.log('doesPageHaveSubscribers pageId', pageId)
-  if (pages && pageId[0]) {
-    let result = pages.find(page => {
-      return page.pageId === pageId[0]
-    })
-    console.log('doesPageHaveSubscribers result', result)
-    if (result) {
-      return result.subscribers > 0
-    }
-  }
-  return true
+export function isEmail (email) {
+    var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase())
 }

@@ -1,27 +1,14 @@
-/* eslint-disable no-return-assign */
-/**
- * Created by imran on 11/11/2017.
- */
-
-import React from 'react'
-
-/* this.props.style must be any of these
-  band
-  success
-  danger
-  accent
- */
-
-class CardBox extends React.Component {
+import React, { Component } from 'react'
+class CardBox extends Component {
   render () {
     return (
-      <div className={`m-portlet m-portlet--border-bottom-${this.props.style}`}>
+      <div className={`m-portlet m-portlet--half-height m-portlet--border-bottom-${this.props.color}`}>
         <div className='m-portlet__body'>
-          <div className='m-widget26' id={this.props.id}>
+          <div className='m-widget26'>
             <div className='m-widget26__number'>
-              {this.props.value}
+              {this.props.number}
               <small>
-                {this.props.label}
+                {this.props.title}
               </small>
             </div>
           </div>
