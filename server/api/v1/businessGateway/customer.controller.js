@@ -10,11 +10,11 @@ const path = require('path')
 
 exports.uploadCSV = function (req, res) {
   console.log('uploadCSV')
-  /* TestData - Start */
+  /* TestData - Start
   req.body.message = [{'componentType': 'text', 'text': 'Please subscribe to my page *Askari V* by typing Yes'}]
   req.body.columns = ['city', 'tags', 'email']
   req.body.filter = [{'column': 'city', 'criteria': 'contains', 'value': 'Karachi'}, {'column': 'tags', 'criteria': 'begins', 'value': 'yell'}]
-  /* TestData - End */
+   TestData - End */
   let directory = logicLayer.directory(req)
   console.log('Directory', directory)
   if (req.files.file.size === 0) {
