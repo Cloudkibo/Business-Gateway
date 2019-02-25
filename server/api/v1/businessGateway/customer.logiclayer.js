@@ -23,11 +23,28 @@ exports.checkFilterValues = function (values, data) {
     for (var i = 0; i < values.length; i++) {
       var filter = values[i]
       console.log('Filter', filter)
-      if (data[`${filter.column}`] === filter.value) {
-        matchCriteria = true
-      } else {
-        matchCriteria = false
-        break
+      if (filter.criteria === 'is') {
+        if (data[`${filter.column}`] === filter.value) {
+          matchCriteria = true
+        } else {
+          matchCriteria = false
+          break
+        }
+      } else if (filter.criteria === 'contains') {
+        if (data[`${filter.column}`].toLowerCase().includes(filter.value.toLowerCase())) {
+          matchCriteria = true
+        } else {
+          matchCriteria = false
+          break
+        }
+      } else if (filter.criteria === 'begins') {
+        var subText = data[`${filter.column}`].substring(0, filter.value.length)
+        if (subText.toLowerCase() === filter.value.toLowerCase()) {
+          matchCriteria = true
+        } else {
+          matchCriteria = false
+          break
+        }
       }
     }
   }
