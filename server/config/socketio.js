@@ -15,7 +15,7 @@ function onDisconnect (socket) {
 // When the user connects.. perform this
 function onConnect (socket) {
   logger.serverLog(TAG, 'On Connect Called Server Side')
-  socket.emit('message', {hello: 'hello'})
+  // socket.emit('message', {hello: 'hello'})
   socket.on('logClient', function (data) {
     logger.serverLog(TAG, 'Got A Message From Log Client ')
     logger.clientLog(data.tag, data.data)
