@@ -15,7 +15,7 @@ module.exports = {
     accounts: 'http://localhost:3024/api/v1',
     chat: 'http://localhost:3022/api',
     kibochat: `http://localhost:3030/api/v1`,
-    kiboengage: `http://localhost:3031/api/v1`
+    kiboengage: `http://localhost:3021/api`
   },
   webhook_ip: 'http://localhost:3020'
 }

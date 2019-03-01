@@ -24,21 +24,21 @@ exports.checkFilterValues = function (values, data) {
       var filter = values[i]
       console.log('Filter', filter)
       if (filter.criteria === 'is') {
-        if (data[`${filter.column}`] === filter.value) {
+        if (data[`${filter.condition}`] === filter.text) {
           matchCriteria = true
         } else {
           matchCriteria = false
           break
         }
       } else if (filter.criteria === 'contains') {
-        if (data[`${filter.column}`].toLowerCase().includes(filter.value.toLowerCase())) {
+        if (data[`${filter.condition}`].toLowerCase().includes(filter.text.toLowerCase())) {
           matchCriteria = true
         } else {
           matchCriteria = false
           break
         }
       } else if (filter.criteria === 'begins') {
-        var subText = data[`${filter.column}`].substring(0, filter.value.length)
+        var subText = data[`${filter.condition}`].substring(0, filter.text.length)
         if (subText.toLowerCase() === filter.value.toLowerCase()) {
           matchCriteria = true
         } else {
