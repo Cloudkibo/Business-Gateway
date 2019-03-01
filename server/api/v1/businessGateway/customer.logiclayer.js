@@ -39,7 +39,7 @@ exports.checkFilterValues = function (values, data) {
         }
       } else if (filter.criteria === 'begins') {
         var subText = data[`${filter.condition}`].substring(0, filter.text.length)
-        if (subText.toLowerCase() === filter.value.toLowerCase()) {
+        if (subText.toLowerCase() === filter.text.toLowerCase()) {
           matchCriteria = true
         } else {
           matchCriteria = false
