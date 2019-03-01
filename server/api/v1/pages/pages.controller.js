@@ -269,7 +269,7 @@ exports.enable = function (req, res) {
                                             }
                                             console.log('response from gettingStarted', resp.body)
                                           })
-                                        require('./../../../config/socketio').sendMessageToClient({
+                                        /* require('./../../../config/socketio').sendMessageToClient({
                                           room_id: req.body.companyId,
                                           body: {
                                             action: 'page_connect',
@@ -280,7 +280,7 @@ exports.enable = function (req, res) {
                                               company_id: req.body.companyId
                                             }
                                           }
-                                        })
+                                        }) */
                                         return res.status(200).json({
                                           status: 'success',
                                           payload: 'Page connected successfully!'
@@ -377,7 +377,7 @@ exports.disable = function (req, res) {
                 payload: JSON.stringify(error)
               })
             }
-            require('./../../../config/socketio').sendMessageToClient({
+            /* require('./../../../config/socketio').sendMessageToClient({
               room_id: req.body.companyId,
               body: {
                 action: 'page_disconnect',
@@ -388,7 +388,7 @@ exports.disable = function (req, res) {
                   company_id: req.body.companyId
                 }
               }
-            })
+            }) */
             return res.status(200).json({
               status: 'success',
               payload: 'Page disconnected successfully!'
