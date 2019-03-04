@@ -1,7 +1,7 @@
 const config = require('../config/environment/index')
 
 exports.serverLog = function (label, data) {
-  const namespace = `KiboEngage:${label}`
+  const namespace = `KiboLite:${label}`
   const debug = require('debug')(namespace)
 
   if (config.env === 'development' || config.env === 'test') {
@@ -17,6 +17,7 @@ exports.clientLog = function (label, data) {
 
   if (config.env === 'development' || config.env === 'staging') {
     debug(data)
+    console.log(data)
     // todo use log levels like info, warn, error and debug
   }
 }
