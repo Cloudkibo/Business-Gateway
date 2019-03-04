@@ -5,7 +5,7 @@
 module.exports = {
   // MongoDB connection options
   mongo: {
-    uri: 'mongodb://localhost/businessgateway-dev'
+    uri: 'mongodb://localhost/kibolite-dev'
   },
   seedDB: false,
   domain: 'http://localhost:8000',

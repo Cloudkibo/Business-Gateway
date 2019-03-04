@@ -5,12 +5,12 @@
 module.exports = {
 
   // Server port
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 8000,
 
   // Secure Server port
   secure_port: process.env.SECURE_PORT || 8443,
 
-  domain: `${process.env.DOMAIN || 'https://skibolite.cloudkibo.com'}`,
+  domain: `${process.env.DOMAIN || 'http://skibolite.cloudkibo.com'}`,
 
   // MongoDB connection options
   mongo: {
