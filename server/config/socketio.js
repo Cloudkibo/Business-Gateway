@@ -68,6 +68,7 @@ exports.setup = function (socketio) {
 
 exports.sendToClient = function (data) {
   logger.serverLog(TAG, `Sending ${data} payload to client using socket.io`)
+  globalSocket.to(data.room_id).emit('message', data.body)
   // globalSocket.to(data.room_id).emit('[NAME]', data.payload)
-  globalSocket.emit('message', data)
+  // globalSocket.emit('message', data)
 }
