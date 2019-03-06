@@ -29,8 +29,8 @@ module.exports = {
     accounts: 'https://saccounts.cloudkibo.com/api/v1',
     chat: 'https://skibochat.cloudkibo.com/api',
     kibochat: `${process.env.DB_LAYER_IP_KIBOCHAT}/api/v1`,
-    // kiboengage: `${process.env.DB_LAYER_IP_KIBOENGAGE}/api/v1`
     kiboengage: `https://skiboengage.cloudkibo.com/api`
+    // kiboengage: `${process.env.DB_LAYER_IP_KIBOENGAGE}/api/v1`
   },
   webhook_ip: process.env.WEBHOOK_IP_ADDRESS || 'localhost'
 
