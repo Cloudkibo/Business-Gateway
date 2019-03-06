@@ -15,7 +15,7 @@ function onDisconnect (socket) {
 // When the user connects.. perform this
 function onConnect (socket) {
   logger.serverLog(TAG, 'On Connect Called Server Side')
-  socket.emit('message', {hello: 'hello'})
+  // socket.emit('message', {hello: 'hello'})
   socket.on('logClient', function (data) {
     logger.serverLog(TAG, 'Got A Message From Log Client ')
     logger.clientLog(data.tag, data.data)
@@ -68,6 +68,7 @@ exports.setup = function (socketio) {
 
 exports.sendToClient = function (data) {
   logger.serverLog(TAG, `Sending ${data} payload to client using socket.io`)
+  globalSocket.to(data.room_id).emit('message', data.body)
   // globalSocket.to(data.room_id).emit('[NAME]', data.payload)
-  globalSocket.emit('message', data)
+  // globalSocket.emit('message', data)
 }

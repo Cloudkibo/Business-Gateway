@@ -1,12 +1,11 @@
 const config = require('./config/environment/index')
-const Raven = require('raven')
 const path = require('path')
 
 module.exports = function (app) {
   // API middlewares go here
   const env = app.get('env')
 
-  app.use('/api/test', require('./api/v1/test'))
+  app.use('/api/v1/test', require('./api/v1/test'))
   app.use('/api/subscribers', require('./api/v1/subscribers'))
   app.use('/api/users', require('./api/v1/user'))
   app.use('/api/company', require('./api/v1/companyprofile'))
@@ -17,6 +16,7 @@ module.exports = function (app) {
   app.use('/api/tags', require('./api/v1/tags'))
   app.use('/api/dashboard', require('./api/v1/dashboard'))
   app.use('/api/scripts', require('./api/scripts'))
+  app.use('/api/businessGateway', require('./api/v1/businessGateway'))
 
   // auth middleware go here if you authenticate on same server
 
@@ -46,8 +46,4 @@ module.exports = function (app) {
   }).post((req, res) => {
     res.redirect('/')
   })
-
-  if (env === 'production' || env === 'staging') {
-    app.use(Raven.errorHandler())
-  }
 }
