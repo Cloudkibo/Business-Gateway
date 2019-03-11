@@ -13,4 +13,10 @@ router.post('/uploadCSV',
   // validate({body: validationSchema.uploadCSV}),
   controller.uploadCSV)
 
+router.put('/update',
+  auth.isAuthenticated(),
+  multipartyMiddleware,
+  validate({body: validationSchema.update}),
+  controller.update)
+
 module.exports = router

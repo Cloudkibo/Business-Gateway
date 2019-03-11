@@ -7,6 +7,17 @@ let request = require('request')
 const fs = require('fs')
 const csv = require('csv-parser')
 const path = require('path')
+const mongoose = require('mongoose')
+
+exports.update = function (req, res) {
+  CustomerDataLayer.genericUpdateCustomerObject(req.body.query, req.body.newPayload, req.body.options)
+    .then(result => {
+      res.status(200).json({status: 'success', payload: result})
+    })
+    .catch(err => {
+      return res.status(500).json({status: 'failed', description: `Failed to update kibolite ${err}`})
+    })
+}
 
 exports.uploadCSV = function (req, res) {
   console.log('uploadCSV')
@@ -28,8 +39,10 @@ exports.uploadCSV = function (req, res) {
   }
   utility.callApi(`companyUser/query`, 'post', { domain_email: req.user.domain_email }, req.headers.authorization)
     .then(companyUser => {
-      console.log('companyUser', companyUser)
       var phoneColumn = req.body.phoneColumn
+      var subscriberIdColumn = req.body.subscriberIdColumn
+      console.log('phoneColumn', phoneColumn)
+      console.log('subscriberIdColumn', subscriberIdColumn)
       fs.rename(req.files.file.path, path.join(directory.dir, '/userfiles/', directory.serverPath), err => {
         if (err) {
           return res.status(500).json({
@@ -37,70 +50,23 @@ exports.uploadCSV = function (req, res) {
             description: 'internal server error' + JSON.stringify(err)
           })
         }
+        var sendMessageMode
+        if (phoneColumn !== 'undefined') {
+          sendMessageMode = 'phone'
+        } else if (subscriberIdColumn !== 'undefined') {
+          sendMessageMode = 'senderId'
+        }
+        console.log('sendMessageMode', sendMessageMode)
         fs.createReadStream(path.join(directory.dir, '/userfiles/', directory.serverPath))
           .pipe(csv())
           .on('data', function (data) {
-            console.log('data', data)
-            if (data[`${phoneColumn}`]) {
-              var matchCriteria = logicLayer.checkFilterValues(req.body.filter, data)
-              if (matchCriteria) {
-                var phoneNumber = data[`${phoneColumn}`]
-                console.log('matchCriteria', matchCriteria)
-                CustomerDataLayer.findUsingQuery({'phoneNumber': phoneNumber, 'pageId': req.body.page_id, 'companyId': companyUser.companyId})
-                  .then(customer => {
-                    console.log('customer', customer)
-                    var customerPayload = {}
-                    if (customer) {
-                      customerPayload.fileName = req.files.file.name.substring(0, req.files.file.name.indexOf('.'))
-                      customerPayload.payload = []
-                      for (let i = 0; i < req.body.columns.length; i++) {
-                        var properties = {}
-                        properties.key = req.body.columns[i]
-                        properties.value = data[`${req.body.columns[i]}`]
-                        console.log('Customer Payload', customerPayload.payload)
-                        customerPayload.payload.push(properties)
-                      }
-                      console.log('Customer Payload', req.files.file.name, req.user._id)
-                      CustomerDataLayer.findAndUpdateCustomerObject({_id: customer._id}, customerPayload)
-                        .then(updatedCustomer => {
-                          console.log('updatedCustomer', updatedCustomer)
-                          sendMessage(req, phoneNumber)
-                        })
-                        .catch(error => {
-                          logger.serverLog(TAG, `Failed to update customer ${JSON.stringify(error)}`)
-                        })
-                    } else {
-                      console.log('Customer Payload', req.files.file.name, req.user._id)
-                      customerPayload.userId = req.user._id
-                      customerPayload.fileName = req.files.file.name.substring(0, req.files.file.name.indexOf('.'))
-                      customerPayload.companyId = companyUser.companyId
-                      customerPayload.pageId = req.body.page_id
-                      customerPayload.phoneNumber = data[`${phoneColumn}`]
-                      customerPayload.payload = []
-                      console.log('Customer Payload', customerPayload)
-                      for (let i = 0; i < req.body.columns.length; i++) {
-                        properties = {}
-                        properties.key = req.body.columns[i]
-                        properties.value = data[`${req.body.columns[i]}`]
-                        customerPayload.payload.push(properties)
-                      }
-                      CustomerDataLayer.createCustomerObject(customerPayload)
-                        .then(savedCustomer => {
-                          console.log('savedCustomer', savedCustomer)
-                          sendMessage(req, phoneNumber)
-                        })
-                        .catch(error => {
-                          logger.serverLog(TAG, `Failed to update number ${JSON.stringify(error)}`)
-                        })
-                    }
-                  })
-                  .catch(err => {
-                    console.log(`Failed to fetch phone number${JSON.stringify(err)}`)
-                  })
-              }
+            if (sendMessageMode === 'phone' && data[`${phoneColumn}`] !== 'undefined') {
+              sendBroadcastUsingPhoneNumber(req, data, phoneColumn, companyUser)
+            } else if (sendMessageMode === 'senderId' && data[`${subscriberIdColumn}`] !== 'undefined') {
+              sendBroadcastUsingSenderId(req, data, subscriberIdColumn, companyUser)
             } else {
               return res.status(404)
-                .json({status: 'failed', description: 'Incorrect column names'})
+                .json({status: 'failed', description: 'Incorrect column name'})
             }
           })
           .on('end', function () {
@@ -109,7 +75,7 @@ exports.uploadCSV = function (req, res) {
             return res.status(201)
               .json({
                 status: 'success',
-                description: 'Customers were sent the invitation message'
+                description: 'Customers were sent the broadcast message'
               })
           })
       })
@@ -122,10 +88,10 @@ exports.uploadCSV = function (req, res) {
     })
 }
 
-function sendMessage (req, phone) {
+function sendMessage (req, sendOption) {
   utility.callApi(`pages/query`, 'post', {userId: req.user._id, connected: true, _id: req.body.page_id}, req.headers.authorization)
     .then(pages => {
-      getBatchData(req.body.message, 'NON_PROMOTIONAL_SUBSCRIPTION', phone, pages[0])
+      getBatchData(req.body.message, 'NON_PROMOTIONAL_SUBSCRIPTION', sendOption, pages[0])
     })
     .catch(error => {
       logger.serverLog(TAG, `Failed to fetch pages ${JSON.stringify(error)}`)
@@ -271,10 +237,8 @@ function prepareMessageData (body) {
     `Return Payload ${JSON.stringify(payload)}`)
   return payload
 }
-function getBatchData (payload, fbMessageTag, phone, page) {
-  let recipient = 'recipient=' + encodeURIComponent(JSON.stringify({
-    'phone_number': phone
-  }))
+function getBatchData (payload, fbMessageTag, sendOption, page) {
+  let recipient = 'recipient=' + encodeURIComponent(JSON.stringify(sendOption))
   let tag = 'tag=' + encodeURIComponent(fbMessageTag)
   let messagingType = 'messaging_type=' + encodeURIComponent('MESSAGE_TAG')
   let batch = []
@@ -302,4 +266,140 @@ function getBatchData (payload, fbMessageTag, phone, page) {
       form.append('batch', JSON.stringify(batch))
     }
   })
+}
+
+function sendBroadcastUsingPhoneNumber (req, data, phoneColumn, companyUser) {
+  var matchCriteria = logicLayer.checkFilterValues(req.body.filter, data)
+  if (matchCriteria) {
+    var phoneNumber = data[`${phoneColumn}`]
+    console.log('matchCriteria', matchCriteria)
+    if (phoneNumber !== '') {
+      CustomerDataLayer.findUsingQuery({'phoneNumber': phoneNumber, 'pageId': req.body.page_id, 'companyId': companyUser.companyId})
+        .then(customer => {
+          console.log('customer', customer)
+          var customerPayload = {}
+          if (customer) {
+            customerPayload.fileName = req.files.file.name.substring(0, req.files.file.name.indexOf('.'))
+            customerPayload.payload = []
+            for (let i = 0; i < req.body.columns.length; i++) {
+              var properties = {}
+              properties.key = req.body.columns[i]
+              properties.value = data[`${req.body.columns[i]}`]
+              console.log('Customer Payload', customerPayload.payload)
+              customerPayload.payload.push(properties)
+            }
+            console.log('Customer Payload', req.files.file.name, req.user._id)
+            CustomerDataLayer.findAndUpdateCustomerObject({_id: customer._id}, customerPayload)
+              .then(updatedCustomer => {
+                console.log('updatedCustomer', updatedCustomer)
+                sendMessage(req, {
+                  'phone_number': phoneNumber
+                })
+              })
+              .catch(error => {
+                logger.serverLog(TAG, `Failed to update customer ${JSON.stringify(error)}`)
+              })
+          } else {
+            console.log('Customer Payload', req.files.file.name, req.user._id)
+            customerPayload.userId = req.user._id
+            customerPayload.fileName = req.files.file.name.substring(0, req.files.file.name.indexOf('.'))
+            customerPayload.companyId = companyUser.companyId
+            customerPayload.pageId = req.body.page_id
+            customerPayload.phoneNumber = data[`${phoneColumn}`]
+            customerPayload.payload = []
+            console.log('Customer Payload', customerPayload)
+            for (let i = 0; i < req.body.columns.length; i++) {
+              properties = {}
+              properties.key = req.body.columns[i]
+              properties.value = data[`${req.body.columns[i]}`]
+              customerPayload.payload.push(properties)
+            }
+            CustomerDataLayer.createCustomerObject(customerPayload)
+              .then(savedCustomer => {
+                console.log('savedCustomer', savedCustomer)
+                sendMessage(req, {
+                  'phone_number': phoneNumber
+                })
+              })
+              .catch(error => {
+                logger.serverLog(TAG, `Failed to update number ${JSON.stringify(error)}`)
+              })
+          }
+        })
+        .catch(err => {
+          console.log(`Failed to fetch phone number${JSON.stringify(err)}`)
+        })
+    }
+  }
+}
+
+function sendBroadcastUsingSenderId (req, data, subscriberIdColumn, companyUser) {
+  var matchCriteria = logicLayer.checkFilterValues(req.body.filter, data)
+  if (matchCriteria) {
+    var subscriberId = data[`${subscriberIdColumn}`]
+    if (subscriberId !== '') {
+      console.log('matchCriteria', matchCriteria)
+      utility.callApi(`subscribers/query`, 'post', {_id: mongoose.Types.ObjectId(subscriberId)}, req.headers.authorization)
+        .then(subscribers => {
+          if (subscribers.length < 1) {
+            return logger.serverLog(TAG, `Unable to fetch subscribers`)
+          }
+          var subscriber = subscribers[0]
+          CustomerDataLayer.findUsingQuery({'subscriberId': subscriber._id, 'pageId': req.body.page_id, 'companyId': companyUser.companyId})
+            .then(customer => {
+              console.log('customer', customer)
+              var customerPayload = {}
+              if (customer) {
+                customerPayload.fileName = req.files.file.name.substring(0, req.files.file.name.indexOf('.'))
+                customerPayload.payload = []
+                for (let i = 0; i < req.body.columns.length; i++) {
+                  var properties = {}
+                  properties.key = req.body.columns[i]
+                  properties.value = data[`${req.body.columns[i]}`]
+                  console.log('Customer Payload', customerPayload.payload)
+                  customerPayload.payload.push(properties)
+                }
+                console.log('Customer Payload', req.files.file.name, req.user._id)
+                CustomerDataLayer.findAndUpdateCustomerObject({_id: customer._id}, customerPayload)
+                  .then(updatedCustomer => {
+                    console.log('updatedCustomer', updatedCustomer)
+                    sendMessage(req, {id: subscriber.senderId})
+                  })
+                  .catch(error => {
+                    logger.serverLog(TAG, `Failed to update customer ${JSON.stringify(error)}`)
+                  })
+              } else {
+                console.log('Customer Payload', req.files.file.name, req.user._id)
+                customerPayload.userId = req.user._id
+                customerPayload.fileName = req.files.file.name.substring(0, req.files.file.name.indexOf('.'))
+                customerPayload.companyId = companyUser.companyId
+                customerPayload.pageId = req.body.page_id
+                customerPayload.subscriberId = data[`${subscriberIdColumn}`]
+                customerPayload.payload = []
+                console.log('Customer Payload', customerPayload)
+                for (let i = 0; i < req.body.columns.length; i++) {
+                  properties = {}
+                  properties.key = req.body.columns[i]
+                  properties.value = data[`${req.body.columns[i]}`]
+                  customerPayload.payload.push(properties)
+                }
+                CustomerDataLayer.createCustomerObject(customerPayload)
+                  .then(savedCustomer => {
+                    console.log('savedCustomer', savedCustomer)
+                    sendMessage(req, {id: subscriber.senderId})
+                  })
+                  .catch(error => {
+                    logger.serverLog(TAG, `Failed to update number ${JSON.stringify(error)}`)
+                  })
+              }
+            })
+            .catch(err => {
+              console.log(`Failed to fetch phone number${JSON.stringify(err)}`)
+            })
+        })
+        .catch(err => {
+          console.log(`Failed to fetch subscriber${JSON.stringify(err)}`)
+        })
+    }
+  }
 }
