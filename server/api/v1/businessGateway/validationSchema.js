@@ -4,23 +4,46 @@ exports.uploadCSV = {
     phoneColumn: {
       type: 'string'
     },
-    _id: {
+    subscriberIdColumn: {
       type: 'string'
+    },
+    page_id: {
+      type: 'string',
+      required: true
     },
     message: {
       type: 'array',
-      items: {}
+      items: {},
+      required: true
     },
     columns: {
       type: 'array',
-      items: {}
+      items: {
+        type: 'string'
+      }
     },
     file: {
-      type: 'object'
+      type: 'object',
+      required: true
     },
     filter: {
       type: 'array',
       items: {}
+    }
+  }
+}
+
+exports.update = {
+  type: 'object',
+  properties: {
+    query: {
+      type: 'object'
+    },
+    newPayload: {
+      type: 'object'
+    },
+    options: {
+      type: 'object'
     }
   }
 }

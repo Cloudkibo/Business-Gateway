@@ -17,6 +17,9 @@ const customerSchema = new Schema({
   phoneNumber: {
     type: String
   },
+  subscriberId: {
+    type: Schema.Types.ObjectId
+  },
   payload: {
     type: Schema.Types.Mixed
   }
