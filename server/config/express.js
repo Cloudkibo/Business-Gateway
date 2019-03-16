@@ -27,6 +27,7 @@ module.exports = function (app) {
   app.use(compression())
   app.use(bodyParser.urlencoded({ extended: true }))
   app.use(bodyParser.json())
+  app.use(express.static(path.join(config.root, 'ssl')))
   app.use(express.static(path.join(config.root, 'client/build')))
 
   // app.use(favicon(path.join(config.root, 'client', 'favicon.ico')))
