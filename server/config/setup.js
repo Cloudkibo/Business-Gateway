@@ -26,11 +26,11 @@ module.exports = function (app, httpapp, config) {
   const server = http.createServer(httpapp)
   const httpsServer = https.createServer(options, app)
 
-  if (['production', 'staging'].indexOf(config.env) > -1) {
-    httpapp.get('*', (req, res) => {
-      res.redirect(`${config.domain}${req.url}`)
-    })
-  }
+  // if (['production', 'staging'].indexOf(config.env) > -1) {
+  //   httpapp.get('*', (req, res) => {
+  //     res.redirect(`${config.domain}${req.url}`)
+  //   })
+  // }
 
   // TODO: we will enable this while doing socket io
   const socket = require('socket.io').listen(
