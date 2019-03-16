@@ -14,6 +14,8 @@ const all = {
   // Server port
   port: process.env.PORT || 8000,
 
+  secure_port: process.env.PORT || 8443,
+
   ip: process.env.IP || undefined,
 
   domain: `${process.env.DOMAIN || 'project domain'}`,
