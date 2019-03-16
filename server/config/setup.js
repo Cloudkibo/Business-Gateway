@@ -11,17 +11,17 @@ module.exports = function (app, httpapp, config) {
     cert: ''
   }
 
-  if (['production', 'staging'].indexOf(config.env) > -1) {
-    try {
-      options = {
-        ca: fs.readFileSync('/root/certs/kibolite.ca-bundle'),
-        key: fs.readFileSync('/root/certs/kibolite.key'),
-        cert: fs.readFileSync('/root/certs/kibolite.crt')
-      }
-    } catch (e) {
-      console.log(e)
-    }
-  }
+  // if (['production', 'staging'].indexOf(config.env) > -1) {
+  //   try {
+  //     options = {
+  //       ca: fs.readFileSync('/root/certs/kibolite.ca-bundle'),
+  //       key: fs.readFileSync('/root/certs/kibolite.key'),
+  //       cert: fs.readFileSync('/root/certs/kibolite.crt')
+  //     }
+  //   } catch (e) {
+  //     console.log(e)
+  //   }
+  // }
 
   const server = http.createServer(httpapp)
   const httpsServer = https.createServer(options, app)
