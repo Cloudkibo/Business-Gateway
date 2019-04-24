@@ -23,6 +23,12 @@ module.exports = function (app) {
   app.get('/', (req, res) => {
     res.cookie('environment', config.env,
       {expires: new Date(Date.now() + 900000)})
+    res.cookie('url_production', 'https://kibolite.cloudkibo.com',
+      {expires: new Date(Date.now() + 900000)})
+    res.cookie('url_staging', 'https://skibolite.cloudkibo.com',
+      {expires: new Date(Date.now() + 900000)})
+    res.cookie('url_development', 'http://localhost:8000',
+      {expires: new Date(Date.now() + 900000)})
     // res.sendFile(path.join(config.root, 'client/index.html'))
     res.render('main', { environment: env })
   })
