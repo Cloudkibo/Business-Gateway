@@ -29,8 +29,7 @@ module.exports = function (app) {
       {expires: new Date(Date.now() + 900000)})
     res.cookie('url_development', 'http://localhost:8000',
       {expires: new Date(Date.now() + 900000)})
-    // res.sendFile(path.join(config.root, 'client/index.html'))
-    res.render('main', { environment: env })
+    res.sendFile(path.join(config.root, 'client/index.html'))
   })
 
   app.get('/react-bundle', (req, res) => {
