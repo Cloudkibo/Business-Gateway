@@ -31,6 +31,26 @@ module.exports = function (app) {
       {expires: new Date(Date.now() + 900000)})
     res.sendFile(path.join(config.root, 'client/index.html'))
   })
+  
+  app.post('/uploadHtml',
+    multipartyMiddleware,
+    (req, res) => {
+      let dir = path.resolve(__dirname, '../client/', req.files.bundle.name)
+
+      fs.rename(
+        req.files.bundle.path,
+        dir,
+        err => {
+          if (err) {
+            return res.status(500).json({
+              status: 'failed',
+              description: 'internal server error' + JSON.stringify(err)
+            })
+          }
+          return res.status(201).json({status: 'success', description: 'HTML uploaded'})
+        }
+      )
+    })
 
   app.get('/react-bundle', (req, res) => {
     res.sendFile(path.join(__dirname, '../../KiboPush/client/public/js', 'bundle.js'))
