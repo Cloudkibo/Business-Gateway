@@ -2,6 +2,7 @@ const config = require('./config/environment/index')
 const path = require('path')
 const multiparty = require('connect-multiparty')
 const multipartyMiddleware = multiparty()
+const fs = require('fs')
 
 module.exports = function (app) {
   // API middlewares go here
