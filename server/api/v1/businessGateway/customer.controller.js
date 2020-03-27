@@ -272,6 +272,8 @@ function getBatchData (payload, fbMessageTag, sendOption, page, reject, resolve)
           return logger.serverLog(TAG, `Batch send error ${JSON.stringify(err)}`)
         }
         let resp = JSON.stringify(body[0].body)
+        console.log('response from facebook withour stringyfy', body[0].body)
+        console.log('response from facebook stringyfy', resp)
         if (resp.error && resp.error.message) {
           reject('fail')
         }
