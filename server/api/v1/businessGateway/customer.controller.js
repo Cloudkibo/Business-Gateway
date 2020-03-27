@@ -76,7 +76,7 @@ exports.uploadCSV = function (req, res) {
             console.log('Calling on End')
             fs.unlinkSync(directory.dir + '/userfiles/' + directory.serverPath)
             Promise.all(requests).then(results => {
-              return res.status(201)
+              return res.status(200)
                 .json({
                   status: 'success',
                   description: 'Customers were sent the broadcast message'
