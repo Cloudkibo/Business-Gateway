@@ -60,6 +60,8 @@ exports.uploadCSV = function (req, res) {
         fs.createReadStream(path.join(directory.dir, '/userfiles/', directory.serverPath))
           .pipe(csv())
           .on('data', function (data) {
+            console.log('data is', data)
+            console.log('data in value', data[`${subscriberIdColumn}`])
             if (sendMessageMode === 'phone' && data[`${phoneColumn}`] !== 'undefined') {
               sendBroadcastUsingPhoneNumber(req, data, phoneColumn, companyUser)
             } else if (sendMessageMode === 'senderId' && data[`${subscriberIdColumn}`] !== 'undefined') {
