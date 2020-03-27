@@ -58,10 +58,10 @@ exports.uploadCSV = function (req, res) {
         }
         console.log('sendMessageMode', sendMessageMode)
         let requests = []
-        requests.push(new Promise((resolve, reject) => {
-          fs.createReadStream(path.join(directory.dir, '/userfiles/', directory.serverPath))
-            .pipe(csv())
-            .on('data', function (data) {
+        fs.createReadStream(path.join(directory.dir, '/userfiles/', directory.serverPath))
+          .pipe(csv())
+          .on('data', function (data) {
+            requests.push(new Promise((resolve, reject) => {
               if (sendMessageMode === 'phone' && data[`${phoneColumn}`] !== 'undefined') {
                 sendBroadcastUsingPhoneNumber(req, data, phoneColumn, companyUser, resolve, reject)
               } else if (sendMessageMode === 'senderId' && data[`${subscriberIdColumn}`] !== 'undefined') {
@@ -70,8 +70,8 @@ exports.uploadCSV = function (req, res) {
                 return res.status(404)
                   .json({status: 'failed', description: 'Incorrect column name'})
               }
-            })
-        }))
+            }))
+          })
           .on('end', function () {
             console.log('Calling on End')
             fs.unlinkSync(directory.dir + '/userfiles/' + directory.serverPath)
