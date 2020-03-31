@@ -442,7 +442,7 @@ exports.enableDisableWelcomeMessage = function (req, res) {
     })
 }
 exports.whitelistDomain = function (req, res) {
-  const pageId = req.body.pageId
+  const pageId = req.body.page_id
   const whitelistDomains = req.body.whitelistDomains
 
   utility.callApi(`pages/whitelistDomain`, 'post', {whitelistDomains: whitelistDomains, page_id: pageId}, req.headers.authorization)
@@ -459,6 +459,25 @@ exports.whitelistDomain = function (req, res) {
       })
     })
 }
+
+exports.fetchWhitelistedDomains = function (req, res) {
+  const pageId = req.params._id
+
+  utility.callApi(`pages/whitelistDomain/${pageId}`, 'get', {}, req.headers.authorization)
+    .then(whitelistDomains => {
+      return res.status(200).json({
+        status: 'success',
+        payload: whitelistDomains
+      })
+    })
+    .catch(error => {
+      return res.status(500).json({
+        status: 'failed',
+        description: `Failed to update whitelist domains ${JSON.stringify(error)}`
+      })
+    })
+}
+
 exports.saveGreetingText = function (req, res) {
   const pageId = req.body.pageId
   const greetingText = req.body.greetingText
