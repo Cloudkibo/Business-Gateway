@@ -57,26 +57,37 @@ exports.uploadCSV = function (req, res) {
           sendMessageMode = 'senderId'
         }
         console.log('sendMessageMode', sendMessageMode)
+        let requests = []
         fs.createReadStream(path.join(directory.dir, '/userfiles/', directory.serverPath))
           .pipe(csv())
           .on('data', function (data) {
-            if (sendMessageMode === 'phone' && data[`${phoneColumn}`] !== 'undefined') {
-              sendBroadcastUsingPhoneNumber(req, data, phoneColumn, companyUser)
-            } else if (sendMessageMode === 'senderId' && data[`${subscriberIdColumn}`] !== 'undefined') {
-              sendBroadcastUsingSenderId(req, data, subscriberIdColumn, companyUser)
-            } else {
-              return res.status(404)
-                .json({status: 'failed', description: 'Incorrect column name'})
-            }
+            requests.push(new Promise((resolve, reject) => {
+              if (sendMessageMode === 'phone' && data[`${phoneColumn}`] !== 'undefined') {
+                sendBroadcastUsingPhoneNumber(req, data, phoneColumn, companyUser, resolve, reject)
+              } else if (sendMessageMode === 'senderId' && data[`${subscriberIdColumn}`] !== 'undefined') {
+                sendBroadcastUsingSenderId(req, data, subscriberIdColumn, companyUser, resolve, reject)
+              } else {
+                return res.status(404)
+                  .json({status: 'failed', description: 'Incorrect column name'})
+              }
+            }))
           })
           .on('end', function () {
             console.log('Calling on End')
             fs.unlinkSync(directory.dir + '/userfiles/' + directory.serverPath)
-            return res.status(201)
-              .json({
-                status: 'success',
-                description: 'Customers were sent the broadcast message'
-              })
+            Promise.all(requests).then(results => {
+              return res.status(200)
+                .json({
+                  status: 'success',
+                  description: 'Customers were sent the broadcast message'
+                })
+            })
+              .catch(err => {
+                return res.status(500).json({
+                  status: 'failed',
+                  description: `Failed to send broadcast to all subscribers`
+                })
+            })
           })
       })
     })
@@ -88,10 +99,10 @@ exports.uploadCSV = function (req, res) {
     })
 }
 
-function sendMessage (req, sendOption) {
+function sendMessage (req, sendOption, reject, resolve) {
   utility.callApi(`pages/query`, 'post', {userId: req.user._id, connected: true, _id: req.body.page_id}, req.headers.authorization)
     .then(pages => {
-      getBatchData(req.body.message, 'NON_PROMOTIONAL_SUBSCRIPTION', sendOption, pages[0])
+      getBatchData(req.body.message, 'NON_PROMOTIONAL_SUBSCRIPTION', sendOption, pages[0], reject, resolve)
     })
     .catch(error => {
       logger.serverLog(TAG, `Failed to fetch pages ${JSON.stringify(error)}`)
@@ -237,7 +248,7 @@ function prepareMessageData (body) {
     `Return Payload ${JSON.stringify(payload)}`)
   return payload
 }
-function getBatchData (payload, fbMessageTag, sendOption, page) {
+function getBatchData (payload, fbMessageTag, sendOption, page, reject, resolve) {
   let recipient = 'recipient=' + encodeURIComponent(JSON.stringify(sendOption))
   let tag = 'tag=' + encodeURIComponent(fbMessageTag)
   let messagingType = 'messaging_type=' + encodeURIComponent('MESSAGE_TAG')
@@ -257,8 +268,17 @@ function getBatchData (payload, fbMessageTag, sendOption, page) {
       const r = request.post('https://graph.facebook.com', (err, httpResponse, body) => {
         console.log('Send Response Broadcast', body)
         if (err) {
+          reject('fail')
           return logger.serverLog(TAG, `Batch send error ${JSON.stringify(err)}`)
         }
+        let resp = JSON.parse(body)
+        console.log('response from facebook stringyfy', resp)
+        if (resp[0].code === 200) {
+          resolve('success')
+        } else {
+          reject('fail')
+        }
+
         logger.serverLog(TAG, `Batch send response ${JSON.stringify(body)}`)
       })
       const form = r.form()
@@ -268,7 +288,7 @@ function getBatchData (payload, fbMessageTag, sendOption, page) {
   })
 }
 
-function sendBroadcastUsingPhoneNumber (req, data, phoneColumn, companyUser) {
+function sendBroadcastUsingPhoneNumber (req, data, phoneColumn, companyUser, resolve, reject) {
   var matchCriteria = logicLayer.checkFilterValues(req.body.filter, data)
   if (matchCriteria) {
     var phoneNumber = data[`${phoneColumn}`]
@@ -294,7 +314,7 @@ function sendBroadcastUsingPhoneNumber (req, data, phoneColumn, companyUser) {
                 console.log('updatedCustomer', updatedCustomer)
                 sendMessage(req, {
                   'phone_number': phoneNumber
-                })
+                }, resolve, reject)
               })
               .catch(error => {
                 logger.serverLog(TAG, `Failed to update customer ${JSON.stringify(error)}`)
@@ -319,7 +339,7 @@ function sendBroadcastUsingPhoneNumber (req, data, phoneColumn, companyUser) {
                 console.log('savedCustomer', savedCustomer)
                 sendMessage(req, {
                   'phone_number': phoneNumber
-                })
+                }, resolve, reject)
               })
               .catch(error => {
                 logger.serverLog(TAG, `Failed to update number ${JSON.stringify(error)}`)
@@ -333,7 +353,7 @@ function sendBroadcastUsingPhoneNumber (req, data, phoneColumn, companyUser) {
   }
 }
 
-function sendBroadcastUsingSenderId (req, data, subscriberIdColumn, companyUser) {
+function sendBroadcastUsingSenderId (req, data, subscriberIdColumn, companyUser, resolve, reject) {
   var matchCriteria = logicLayer.checkFilterValues(req.body.filter, data)
   if (matchCriteria) {
     var subscriberId = data[`${subscriberIdColumn}`]
@@ -363,7 +383,7 @@ function sendBroadcastUsingSenderId (req, data, subscriberIdColumn, companyUser)
                 CustomerDataLayer.findAndUpdateCustomerObject({_id: customer._id}, customerPayload)
                   .then(updatedCustomer => {
                     console.log('updatedCustomer', updatedCustomer)
-                    sendMessage(req, {id: subscriber.senderId})
+                    sendMessage(req, {id: subscriber.senderId}, resolve, reject)
                   })
                   .catch(error => {
                     logger.serverLog(TAG, `Failed to update customer ${JSON.stringify(error)}`)
@@ -386,7 +406,7 @@ function sendBroadcastUsingSenderId (req, data, subscriberIdColumn, companyUser)
                 CustomerDataLayer.createCustomerObject(customerPayload)
                   .then(savedCustomer => {
                     console.log('savedCustomer', savedCustomer)
-                    sendMessage(req, {id: subscriber.senderId})
+                    sendMessage(req, {id: subscriber.senderId}, resolve, reject)
                   })
                   .catch(error => {
                     logger.serverLog(TAG, `Failed to update number ${JSON.stringify(error)}`)
