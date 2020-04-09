@@ -4,7 +4,7 @@ const needle = require('needle')
 const logger = require('../../../components/logger')
 const TAG = 'api/v2/pages/pages.controller.js'
 let config = require('./../../../config/environment')
-
+const { sendErrorResponse, sendSuccessResponse } = require('../../global/response')
 // const util = require('util')
 
 exports.index = function (req, res) {
@@ -172,11 +172,11 @@ exports.connectedPages = function (req, res) {
 }
 
 exports.enable = function (req, res) {
-  utility.callApi('companyuser/query', 'post', {domain_email: req.user.domain_email, populate: 'companyId'}, req.headers.authorization)
+  utility.callApi('companyuser/query', 'post', {domain_email: req.user.domain_email, populate: 'companyId'})
     .then(companyUser => {
-      utility.callApi(`featureUsage/planQuery`, 'post', {planId: companyUser.companyId.planId}, req.headers.authorization)
+      utility.callApi(`featureUsage/planQuery`, 'post', {planId: companyUser.companyId.planId})
         .then(planUsage => {
-          utility.callApi(`featureUsage/companyQuery`, 'post', {companyId: companyUser.companyId._id}, req.headers.authorization)
+          utility.callApi(`featureUsage/companyQuery`, 'post', {companyId: companyUser.companyId._id})
             .then(companyUsage => {
               // add paid plan check later
               // if (planUsage.facebook_pages !== -1 && companyUsage.facebook_pages >= planUsage.facebook_pages) {
@@ -185,24 +185,19 @@ exports.enable = function (req, res) {
               //     description: `Your pages limit has reached. Please upgrade your plan to premium in order to connect more pages.`
               //   })
               // }
-              utility.callApi(`pages/${req.body._id}`, 'get', {}, req.headers.authorization) // fetch page
+              utility.callApi(`pages/${req.body._id}`, 'get', {}) // fetch page
                 .then(page => {
-                  needle.get(
-                    `https://graph.facebook.com/v2.10/${page.pageId}?fields=is_published&access_token=${page.userId.facebookInfo.fbToken}`,
-                    (err, resp) => {
-                      if (err) {
+                  needle('get', `https://graph.facebook.com/v2.6/me?access_token=${page.accessToken}`)
+                    .then(response => {
+                      if (response.body.error) {
                         logger.serverLog(TAG,
-                          `Graph api error at getting page publish status ${JSON.stringify(err)}`)
-                      }
-                      if (resp.body.is_published === false) {
-                        return res.status(404).json({
-                          status: 'failed',
-                          payload: 'Page is not published.'
-                        })
+                          `Internal Server Error ${JSON.stringify(
+                            response.body.error)}`, 'error')  
+                        return res.status(400).json({status: 'failed', payload: response.body.error.message, type: 'invalid_permissions'})
                       } else {
-                        utility.callApi(`pages/${page._id}/connect`, 'get', {}, req.headers.authorization) // fetch connected page
+                        utility.callApi(`pages/query`, 'post', {pageId: req.body.pageId, connected: true})
                           .then(pageConnected => {
-                            if (pageConnected !== {}) {
+                            if (pageConnected.length === 0) {
                               let query = {
                                 connected: true,
                                 isWelcomeMessageEnabled: true,
@@ -213,135 +208,143 @@ exports.enable = function (req, res) {
                                     text: 'Hi {{user_full_name}}! Thanks for getting in touch with us on Messenger. Please send us any questions you may have'
                                   }]
                               }
-                              utility.callApi(`pages/${req.body._id}`, 'put', query, req.headers.authorization) // connect page
-                                .then(connectPage => {
-                                  utility.callApi(`pages/whitelistDomain`, 'post', {page_id: page.pageId, whitelistDomains: [`${config.domain}`]}, req.headers.authorization)
-                                    .then(whitelistDomains => {
-                                    })
-                                    .catch(error => {
-                                      logger.serverLog(TAG,
-                                        `Failed to whitelist domain ${JSON.stringify(error)}`)
-                                    })
-                                  utility.callApi(`featureUsage/updateCompany`, 'put', {
-                                    query: {companyId: req.body.companyId},
-                                    newPayload: { $inc: { facebook_pages: 1 } },
-                                    options: {}
-                                  }, req.headers.authorization)
-                                    .then(updated => {
-                                    })
-                                    .catch(error => {
-                                      return res.status(500).json({
-                                        status: 'failed',
-                                        payload: `Failed to update company usage ${JSON.stringify(error)}`
+                              utility.callApi('pages/query', 'post', {_id: req.body._id})
+                                .then(pages => {
+                                  let page = pages[0]
+                                  utility.callApi(`pages/${req.body._id}`, 'put', query) // connect page
+                                    .then(connectPage => {
+                                      utility.callApi(`pages/whitelistDomain`, 'post', {page_id: page.pageId, whitelistDomains: [`${config.domain}`]}, 'accounts', req.headers.authorization)
+                                        .then(whitelistDomains => {
+                                        })
+                                        .catch(error => {
+                                          logger.serverLog(TAG,
+                                            `Failed to whitelist domain ${JSON.stringify(error)}`, 'error')
+                                        })
+                                      utility.callApi(`featureUsage/updateCompany`, 'put', {
+                                        query: {companyId: req.body.companyId},
+                                        newPayload: { $inc: { facebook_pages: 1 } },
+                                        options: {}
                                       })
-                                    })
-                                  utility.callApi(`subscribers/update`, 'put', {query: {pageId: page._id}, newPayload: {isEnabledByPage: true}, options: {}}, req.headers.authorization) // update subscribers
-                                    .then(updatedSubscriber => {
-                                      const options = {
-                                        url: `https://graph.facebook.com/v2.6/${page.pageId}/subscribed_apps?access_token=${page.accessToken}`,
-                                        qs: {access_token: page.accessToken},
-                                        method: 'POST'
-                                      }
-                                      needle.post(options.url, options, (error, response) => {
-                                        if (error) {
-                                          return res.status(500).json({
-                                            status: 'failed',
-                                            payload: JSON.stringify(error)
-                                          })
-                                        }
-                                        var valueForMenu = {
-                                          'get_started': {
-                                            'payload': '<GET_STARTED_PAYLOAD>'
-                                          },
-                                          'greeting': [
-                                            {
-                                              'locale': 'default',
-                                              'text': 'Hi {{user_full_name}}! Please tap on getting started to start the conversation.'
-                                            }]
-                                        }
-                                        const requesturl = `https://graph.facebook.com/v2.6/me/messenger_profile?access_token=${page.accessToken}`
-                                        needle.request('post', requesturl, valueForMenu,
-                                          {json: true}, function (err, resp) {
-                                            if (err) {
+                                        .then(updated => {
+                                          // console.log('update company')
+                                        })
+                                        .catch(error => {
+                                          sendErrorResponse(res, 500, `Failed to update company usage ${JSON.stringify(error)}`)
+                                        })
+                                      utility.callApi(`subscribers/update`, 'put', {query: {pageId: page._id}, newPayload: {isEnabledByPage: true}, options: {}}) // update subscribers
+                                        .then(updatedSubscriber => {
+                                          const options = {
+                                            url: `https://graph.facebook.com/v2.6/${page.pageId}/subscribed_apps?access_token=${page.accessToken}`,
+                                            qs: {access_token: page.accessToken},
+                                            method: 'POST'
+                                          }
+                                          let bodyToSend = {
+                                            subscribed_fields: [
+                                              'feed', 'conversations', 'mention', 'messages', 'message_echoes', 'message_deliveries', 'messaging_optins', 'messaging_postbacks', 'message_reads', 'messaging_referrals', 'messaging_policy_enforcement']
+                                          }
+                                          needle.post(`https://graph.facebook.com/v3.2/me/subscribed_apps?access_token=${page.accessToken}`, bodyToSend, (error, response) => {
+                                            console.log('response.body', response.body)
+                                            if (error) {
+                                              console.log('error in subscribed_apps', error)
+                                              sendErrorResponse(res, 5000, JSON.stringify(error))
+                                            }
+                                            if (response.body.error) {
                                               logger.serverLog(TAG,
                                                 `Internal Server Error ${JSON.stringify(
-                                                  err)}`)
+                                                  response.body.error)}`, 'error')
                                             }
-                                            console.log('response from gettingStarted', resp.body)
+                                            if (response.body.success) {
+                                              let updateConnectedFacebook = {query: {pageId: page.pageId}, newPayload: {connectedFacebook: true}, options: {multi: true}}
+                                              utility.callApi(`pages/update`, 'post', updateConnectedFacebook) // connect page
+                                                .then(updatedPage => {
+                                                })
+                                                .catch(error => {
+                                                  logger.serverLog(TAG,
+                                                    `Failed to updatedPage ${JSON.stringify(error)}`, 'error')
+                                                })
+                                            }
+                                            var valueForMenu = {
+                                              'get_started': {
+                                                'payload': '<GET_STARTED_PAYLOAD>'
+                                              },
+                                              'greeting': [
+                                                {
+                                                  'locale': 'default',
+                                                  'text': 'Hi {{user_full_name}}! Please tap on getting started to start the conversation.'
+                                                }]
+                                            }
+                                            const requesturl = `https://graph.facebook.com/v2.6/me/messenger_profile?access_token=${page.accessToken}`
+                                            needle.request('post', requesturl, valueForMenu,
+                                              {json: true}, function (err, resp) {
+                                                if (err) {
+                                                  logger.serverLog(TAG,
+                                                    `Internal Server Error ${JSON.stringify(
+                                                      err)}`, 'error')
+                                                }
+                                                if (resp.body.error) {
+                                                  logger.serverLog(TAG,
+                                                    `Internal Server Error ${JSON.stringify(
+                                                      resp.body.error)}`, 'error')
+                                                }
+                                              })
+                                            // require('./../../../config/socketio').sendMessageToClient({
+                                            //   room_id: req.body.companyId,
+                                            //   body: {
+                                            //     action: 'page_connect',
+                                            //     payload: {
+                                            //       page_id: page.pageId,
+                                            //       user_id: req.user._id,
+                                            //       user_name: req.user.name,
+                                            //       company_id: req.body.companyId
+                                            //     }
+                                            //   }
+                                            // })
+                                            sendSuccessResponse(res, 200, 'Page connected successfully!')
                                           })
-                                        /* require('./../../../config/socketio').sendMessageToClient({
-                                          room_id: req.body.companyId,
-                                          body: {
-                                            action: 'page_connect',
-                                            payload: {
-                                              page_id: page.pageId,
-                                              user_id: req.user._id,
-                                              user_name: req.user.name,
-                                              company_id: req.body.companyId
-                                            }
-                                          }
-                                        }) */
-                                        return res.status(200).json({
-                                          status: 'success',
-                                          payload: 'Page connected successfully!'
                                         })
-                                      })
+                                        .catch(error => {
+                                          sendErrorResponse(res, 500, `Failed to update subscriber ${JSON.stringify(error)}`)
+                                        })
                                     })
                                     .catch(error => {
-                                      return res.status(500).json({
-                                        status: 'failed',
-                                        payload: `Failed to update subscriber ${JSON.stringify(error)}`
-                                      })
+                                      sendErrorResponse(res, 500, `Failed to connect page ${JSON.stringify(error)}`)
                                     })
+                                    //   } else {
+                                    //     logger.serverLog(TAG, `Failed to start reach estimation`, 'error')
+                                    //   }
+                                    // })
+                                    // .catch(err => {
+                                    //   logger.serverLog(TAG, `Error at find page ${err}`, 'error')
+                                    // })
                                 })
-                                .catch(error => {
-                                  return res.status(500).json({
-                                    status: 'failed',
-                                    payload: `Failed to connect page ${JSON.stringify(error)}`
-                                  })
+                                .catch(err => {
+                                  logger.serverLog(TAG, `Error at find page ${err}`, 'error')
+                                  sendErrorResponse(res, 500, err)
                                 })
                             } else {
-                              res.status(400).json({
-                                status: 'failed',
-                                payload: `Page is already connected by ${pageConnected.userId.facebookInfo.name}. In order to manage this page please ask ${pageConnected.userId.facebookInfo.name} to create a team account and invite you.`
-                              })
+                              sendSuccessResponse(res, 200, {msg: `Page is already connected by ${pageConnected[0].userId.facebookInfo.name} (${pageConnected[0].userId.email}).`})
                             }
-                          })
-                          .catch(error => {
-                            return res.status(500).json({
-                              status: 'failed',
-                              payload: `Failed to fetch connected page ${JSON.stringify(error)}`
-                            })
                           })
                       }
                     })
+                    .catch(error => {
+                      sendErrorResponse(res, 500, `Failed to check page token ${JSON.stringify(error)}`)
+                    })
                 })
                 .catch(error => {
-                  return res.status(500).json({
-                    status: 'failed',
-                    payload: `Failed to fetch page ${JSON.stringify(error)}`
-                  })
+                  sendErrorResponse(res, 500, `Failed to fetch page ${JSON.stringify(error)}`)
                 })
             })
             .catch(error => {
-              return res.status(500).json({
-                status: 'failed',
-                payload: `Failed to fetch company usage ${JSON.stringify(error)}`
-              })
+              sendErrorResponse(res, 500, `Failed to fetch company usage ${JSON.stringify(error)}`)
             })
         })
         .catch(error => {
-          return res.status(500).json({
-            status: 'failed',
-            payload: `Failed to fetch plan usage ${JSON.stringify(error)}`
-          })
+          sendErrorResponse(res, 500, `Failed to fetch plan usage ${JSON.stringify(error)}`)
         })
     })
     .catch(error => {
-      return res.status(500).json({
-        status: 'failed',
-        payload: `Failed to fetch company user ${JSON.stringify(error)}`
-      })
+      sendErrorResponse(res, 500, `Failed to fetch company user ${JSON.stringify(error)}`)
     })
 }
 
@@ -600,5 +603,18 @@ exports.otherPages = function (req, res) {
         status: 'failed',
         payload: `Failed to fetch company user ${JSON.stringify(error)}`
       })
+    })
+}
+
+exports.deleteWhitelistDomain = function (req, res) {
+  const pageId = req.body.page_id
+  const whitelistDomain = req.body.whitelistDomain
+
+  utility.callApi(`pages/deleteWhitelistDomain`, 'post', {page_id: pageId, whitelistDomain: whitelistDomain}, req.headers.authorization)
+    .then(whitelistDomains => {
+      sendSuccessResponse(res, 200, whitelistDomains)
+    })
+    .catch(error => {
+      sendErrorResponse(res, 500, '', `Failed to delete whitelist domains ${JSON.stringify(error)}`)
     })
 }
