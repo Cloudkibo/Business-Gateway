@@ -30,5 +30,6 @@ module.exports = {
     // kiboengage: `${process.env.DB_LAYER_IP_KIBOENGAGE}/api/v1`,
     kiboengage: `https://kiboengage.cloudkibo.com/api`
   },
-  webhook_ip: process.env.WEBHOOK_IP_ADDRESS || 'localhost'
+  webhook_ip: process.env.WEBHOOK_IP_ADDRESS || 'localhost',
+  papertrail_log_levels: process.env.PAPERTRAIL_LOG_LEVELS
 }
