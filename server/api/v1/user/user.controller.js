@@ -9,7 +9,7 @@ exports.index = function (req, res) {
     .then(user => {
       return res.status(200).json({
         status: 'success',
-        payload: user
+        payload: {user}
       })
     }).catch(error => {
       logger.serverLog(TAG, `Error while fetching user details ${util.inspect(error)}`)
